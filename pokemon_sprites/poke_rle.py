@@ -1,7 +1,8 @@
+from PIL import Image, ImageShow
 from .bitwise import BitStreamReader
 
 
-def decompress_sprite(bytes_stream):
+def decompress_sprite(bytes_stream, show=False):
     bits = BitStreamReader(bytes_stream)
     read = bits.read
 
@@ -25,7 +26,10 @@ def decompress_sprite(bytes_stream):
         mode += read(1)
 
     _decompress_rle(bits, size, buffer_1)
-    pass
+    if show:
+        im = Image.frombytes("1", (56, 56), bytes(buffer_0))
+        ImageShow.show(im)
+
 
 def _decompress_rle(bit_stream, size, buffer):
     read = bit_stream.read
