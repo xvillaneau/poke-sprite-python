@@ -1,4 +1,4 @@
-from PIL import Image, ImageShow
+from PIL import Image, ImageOps
 from .bitwise import BitStreamReader
 
 
@@ -31,11 +31,12 @@ def decompress_sprite(bytes_stream, show=False):
         delta_decode_buffer(buffer_1)
     delta_decode_buffer(buffer_0)
     if mode != 0:
-        buffer_1 ^= buffer_0
+        for i in range(392):
+            buffer_1[i] ^= buffer_0[i]
 
     if show:
-        im = Image.frombytes("1", (56, 56), bytes(buffer_0))
-        ImageShow.show(im)
+        im = Image.frombuffer("L", (56, 56), render(buffer_b, buffer_c))
+        ImageOps.invert(im).show()
 
 
 def _decompress_rle(bit_stream, size, buffer):
@@ -93,3 +94,17 @@ DELTA_DECODE_NIBBLE = [
     0b1111, 0b1110, 0b1100, 0b1101,  # 1000, 1001, 1010, 1011
     0b1000, 0b1001, 0b1011, 0b1010,  # 1100, 1101, 1110, 1111
 ]
+BIT_FILTERS = [128, 64, 32, 16, 8, 4, 2, 1]
+
+
+def render(buffer_b, buffer_c):
+    size = 7 * 7 * 64
+    screen = bytearray(size)
+    pointer = 0
+    for byte_b, byte_c in zip(buffer_b, buffer_c):
+        for f in BIT_FILTERS:
+            screen[pointer] = (byte_b & f > 0) * 85 + (byte_c & f > 0) * 170
+            pointer += 1
+        if pointer >= size:
+            break
+    return screen
