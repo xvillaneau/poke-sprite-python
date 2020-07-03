@@ -10,8 +10,8 @@ Progress: Still a Proof-of-Concept
 Core functions:
 - [x] Implement bitwise stream reader
 - [x] Implement basic functional decompression
-- [ ] Implement delta / XOR decoding based on the mode
-- [ ] Implement final image output from the two bit planes
+- [x] Implement delta / XOR decoding based on the mode
+- [x] Implement final image output from the two bit planes
 
 Maybe someday:
 - [ ] Clean up, test, and document
