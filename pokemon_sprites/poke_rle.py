@@ -105,17 +105,16 @@ DELTA_DECODE_NIBBLE = [
     0b1111, 0b1110, 0b1100, 0b1101,  # 1000, 1001, 1010, 1011
     0b1000, 0b1001, 0b1011, 0b1010,  # 1100, 1101, 1110, 1111
 ]
-BIT_FILTERS = [128, 64, 32, 16, 8, 4, 2, 1]
 
 
-def render(buffer_b, buffer_c):
-    size = 7 * 7 * 64
-    screen = bytearray(size)
-    pointer = 0
-    for byte_b, byte_c in zip(buffer_b, buffer_c):
-        for f in BIT_FILTERS:
-            screen[pointer] = (byte_b & f > 0) * 85 + (byte_c & f > 0) * 170
-            pointer += 1
-        if pointer >= size:
-            break
+def render(buffer_0, buffer_1):
+    screen = bytearray(49 * 64)
+    for pointer in range(49 * 8):
+        col, row = divmod(pointer, 56)
+        pos = row * 56 + col * 8
+
+        a, b = buffer_0[pointer], buffer_1[pointer]
+        for i in range(8):
+            f = 1 << (7 - i)
+            screen[pos + i] = (a & f > 0) * 85 + (b & f > 0) * 170
     return screen
