@@ -12,20 +12,19 @@ def decompress_sprite(bytes_stream, show=False):
     width = read(4)
     height = read(4)
     # Bits to read per sprite plane
-    size = width * height * 64
 
     if read(1):
         buffer_0, buffer_1 = buffer_c, buffer_b
     else:
         buffer_0, buffer_1 = buffer_b, buffer_c
 
-    _decompress_rle(bits, size, buffer_0)
+    _decompress_rle(bits, width, height, buffer_0)
 
     mode = read(1)
     if mode:
         mode += read(1)
 
-    _decompress_rle(bits, size, buffer_1)
+    _decompress_rle(bits, width, height, buffer_1)
 
     if mode != 1:
         delta_decode_buffer(buffer_1)
@@ -39,20 +38,27 @@ def decompress_sprite(bytes_stream, show=False):
         ImageOps.invert(im).show()
 
 
-def _decompress_rle(bit_stream, size, buffer):
-    read = bit_stream.read
-
-    packet = read(1)
+def _decompress_rle(bit_stream, width, height, buffer):
+    # Constant we'll use a lot
+    h_col = height * 8
+    # Keeps track of where to write the next pair of bytes
     pos, shift = 0, 6
+    # Number of pairs to write
+    size = width * height * 32
+    # Number of pairs written
     written = 0
 
+    # First bit tells whether we start by data or RLE
+    read = bit_stream.read
+    mode = read(1)
+
     while written < size:
-        if packet == 1:  # data
+        if mode == 1:  # data
             if pair := read(2):
                 buffer[pos] |= (pair << shift)
-                written += 2
+                written += 1
             else:  # data terminated; switch mode and don't write
-                packet = 0
+                mode = 0
                 continue
 
         else:  # Decode RLE
@@ -61,12 +67,12 @@ def _decompress_rle(bit_stream, size, buffer):
                 n_bits += 1
             rle_count = (1 << n_bits) + read(n_bits) - 1
             # Those are all pairs of zero, no need to write each
-            written += rle_count * 2
-            packet = 1
+            mode = 1
+            written += rle_count
 
-        col = written // 112
-        row = (written >> 1) % 56
-        pos = 7 * row + (col // 4)
+        # Compute where in the buffer to write next
+        col = written // h_col
+        pos = written % h_col + (col // 4) * h_col
         shift = 6 - 2 * (col % 4)
 
 
