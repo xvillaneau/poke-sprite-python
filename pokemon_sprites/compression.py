@@ -1,4 +1,8 @@
+import logging
+
 from .bitwise import BitStreamReader
+
+logger = logging.getLogger("poke_sprite")
 
 
 def decompress_sprite(bytes_stream, declared_size=None):
@@ -8,7 +12,7 @@ def decompress_sprite(bytes_stream, declared_size=None):
     width = bits.read(4)
     height = bits.read(4)
     # Bits to read per sprite plane
-    print(f"Detected a size of {width}x{height} from the binary data")
+    logger.debug("Detected a size of %d×%d tiles from the binary data", width, height)
 
     max_size_tiles = max(width * height, 49)
     if declared_size is not None:
@@ -16,17 +20,18 @@ def decompress_sprite(bytes_stream, declared_size=None):
         max_size_tiles = max(max_size_tiles, declared_w * declared_h)
 
     buffer = bytearray(392 * 2 + 8 * max_size_tiles)
-    print(f"Created memory buffer of {len(buffer)} bytes")
+    logger.debug("Created memory buffer of %d bytes", len(buffer))
     view = memoryview(buffer)
     buffer_b = view[392:]
     buffer_c = view[392 * 2:]
 
-    invert_buffers = bool(read(1))
-    if invert_buffers:
+    if invert_buffers := read(1):
         buffer_0, buffer_1 = buffer_c, buffer_b
     else:
         buffer_0, buffer_1 = buffer_b, buffer_c
+    logger.debug("Bit plane order detected: BP0 in %s", 'C' if invert_buffers else 'B')
 
+    logger.debug("Decompressing Bit Plane 0")
     decompress_to_buffer(bits, width, height, buffer_0)
 
     mode = read(1)
@@ -34,8 +39,10 @@ def decompress_sprite(bytes_stream, declared_size=None):
         mode += read(1)
     mode += 1
 
+    logger.debug("Decompressing Bit Plane 1")
     decompress_to_buffer(bits, width, height, buffer_1)
 
+    logger.debug("Decoding mode %d detected", mode)
     if mode == 1:
         delta_decode_buffer(width, height, buffer_1)
         delta_decode_buffer(width, height, buffer_0)
@@ -49,6 +56,7 @@ def decompress_sprite(bytes_stream, declared_size=None):
         delta_decode_buffer(width, height, buffer_0)
         xor_buffers(width, height, buffer_1, buffer_0)
 
+    logger.info("Decompression complete")
     return buffer, width, height
 
 
@@ -102,6 +110,7 @@ def delta_decode_buffer(width, height, buffer):
     # a bit all around the place.
 
     row, col, state = 0, 0, 0
+    logger.debug("Applying Delta decoding")
     while row < (height * 8):
         pos = col * height * 8 + row
         byte = buffer[pos]

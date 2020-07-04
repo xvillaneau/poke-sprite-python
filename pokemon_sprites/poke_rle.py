@@ -1,6 +1,10 @@
+import logging
+
 from PIL import Image, ImageOps
 
 from .compression import decompress_sprite
+
+logger = logging.getLogger("poke_sprite")
 
 
 def read_sprite(bytes_stream, *, show=False, declared_size=None):
@@ -14,9 +18,11 @@ def read_sprite(bytes_stream, *, show=False, declared_size=None):
     if declared_size is not None:
         width, height = declared_size
 
+    logger.info("Adjusting position of sprite for a size of %dx%d", width, height)
     adjust_position(width, height, buffer_b, buffer_a)
     adjust_position(width, height, buffer_c, buffer_b)
 
+    logger.info("Processing complete")
     if show:
         im = Image.frombuffer("L", (56, 56), render(buffer_a, buffer_b))
         ImageOps.invert(im).show()
