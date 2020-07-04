@@ -15,7 +15,7 @@ Core functions:
 
 Maybe someday:
 - [ ] Clean up, test, and document
-- [ ] Implement 7 x 7 buffer with the correct tiles position
+- [x] Implement 7 x 7 buffer with the correct tiles position
 - [ ] Correctly implement the full continuous memory buffer
 - [ ] Attempt to reproduce the `MISSINGNO.` sprite glitch
 - [ ] Implement compression

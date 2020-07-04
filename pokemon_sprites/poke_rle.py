@@ -6,6 +6,7 @@ def decompress_sprite(bytes_stream, show=False):
     bits = BitStreamReader(bytes_stream)
     read = bits.read
 
+    buffer_a = bytearray(392)
     buffer_b = bytearray(392)
     buffer_c = bytearray(392)
 
@@ -33,8 +34,11 @@ def decompress_sprite(bytes_stream, show=False):
         for i in range(width * height * 8):
             buffer_1[i] ^= buffer_0[i]
 
+    adjust_position(width, height, buffer_b, buffer_a)
+    adjust_position(width, height, buffer_c, buffer_b)
+
     if show:
-        im = Image.frombuffer("L", (56, 56), render(buffer_b, buffer_c))
+        im = Image.frombuffer("L", (56, 56), render(buffer_a, buffer_b))
         ImageOps.invert(im).show()
 
 
@@ -105,6 +109,21 @@ DELTA_DECODE_NIBBLE = [
     0b1111, 0b1110, 0b1100, 0b1101,  # 1000, 1001, 1010, 1011
     0b1000, 0b1001, 0b1011, 0b1010,  # 1100, 1101, 1110, 1111
 ]
+
+
+def adjust_position(width, height, src_buffer, dest_buffer):
+    h_pad = 7 - height
+    w_pad = (8 - width) // 2
+    h_col = height * 8
+
+    for i in range(392):
+        dest_buffer[i] = 0
+
+    src, dst = 0, w_pad * 56 + h_pad * 8
+    for _ in range(width):
+        dest_buffer[dst:dst + h_col] = src_buffer[src:src + h_col]
+        src += h_col
+        dst += 56
 
 
 def render(buffer_0, buffer_1):
