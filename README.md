@@ -5,7 +5,8 @@ video by the _Retro Games Mechanics Explained_ YouTube channel. The goal is to
 reproduce the image compression and decompression algorithm used in the
 Pokémon Blue (which I played), Red and Yellow games for the Nintendo Gameboy.
 
-Progress: Still a Proof-of-Concept
+**Progress:** Should work for all valid sprites and some of the glitched
+Pokémon (MissingNo confirmed to work).
 
 Core functions:
 - [x] Implement bitwise stream reader
@@ -16,8 +17,8 @@ Core functions:
 Maybe someday:
 - [ ] Clean up, test, and document
 - [x] Implement 7 x 7 buffer with the correct tiles position
-- [ ] Correctly implement the full continuous memory buffer
-- [ ] Attempt to reproduce the `MISSINGNO.` sprite glitch
+- [x] Correctly implement the full continuous memory buffer
+- [x] Attempt to reproduce the `MISSINGNO.` sprite glitch
 - [ ] Implement compression
 
 ### Acknowledgments
