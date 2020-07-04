@@ -1,36 +1,22 @@
 from PIL import Image, ImageOps
-from .bitwise import BitStreamReader
+
+from .compression import decompress_sprite
 
 
-def decompress_sprite(bytes_stream, show=False):
-    bits = BitStreamReader(bytes_stream)
-    read = bits.read
+def read_sprite(bytes_stream, show=False):
 
+    buffer_b, buffer_c, width, height, mode, invert_buffers = decompress_sprite(bytes_stream)
     buffer_a = bytearray(392)
-    buffer_b = bytearray(392)
-    buffer_c = bytearray(392)
 
-    width = read(4)
-    height = read(4)
-    # Bits to read per sprite plane
-
-    if read(1):
+    if invert_buffers:
         buffer_0, buffer_1 = buffer_c, buffer_b
     else:
         buffer_0, buffer_1 = buffer_b, buffer_c
 
-    _decompress_rle(bits, width, height, buffer_0)
-
-    mode = read(1)
-    if mode:
-        mode += read(1)
-
-    _decompress_rle(bits, width, height, buffer_1)
-
-    if mode != 1:
+    if mode != 2:
         delta_decode_buffer(width, height, buffer_1)
     delta_decode_buffer(width, height, buffer_0)
-    if mode != 0:
+    if mode != 1:
         for i in range(width * height * 8):
             buffer_1[i] ^= buffer_0[i]
 
@@ -40,44 +26,6 @@ def decompress_sprite(bytes_stream, show=False):
     if show:
         im = Image.frombuffer("L", (56, 56), render(buffer_a, buffer_b))
         ImageOps.invert(im).show()
-
-
-def _decompress_rle(bit_stream, width, height, buffer):
-    # Constant we'll use a lot
-    h_col = height * 8
-    # Keeps track of where to write the next pair of bytes
-    pos, shift = 0, 6
-    # Number of pairs to write
-    size = width * height * 32
-    # Number of pairs written
-    written = 0
-
-    # First bit tells whether we start by data or RLE
-    read = bit_stream.read
-    mode = read(1)
-
-    while written < size:
-        if mode == 1:  # data
-            if pair := read(2):
-                buffer[pos] |= (pair << shift)
-                written += 1
-            else:  # data terminated; switch mode and don't write
-                mode = 0
-                continue
-
-        else:  # Decode RLE
-            n_bits = 1
-            while read(1):  # Detect sequence of 1..10
-                n_bits += 1
-            rle_count = (1 << n_bits) + read(n_bits) - 1
-            # Those are all pairs of zero, no need to write each
-            mode = 1
-            written += rle_count
-
-        # Compute where in the buffer to write next
-        col = written // h_col
-        pos = written % h_col + (col // 4) * h_col
-        shift = 6 - 2 * (col % 4)
 
 
 def delta_decode_buffer(width, height, buffer):
