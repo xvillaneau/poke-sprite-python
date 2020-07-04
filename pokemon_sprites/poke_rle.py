@@ -3,13 +3,16 @@ from PIL import Image, ImageOps
 from .compression import decompress_sprite
 
 
-def read_sprite(bytes_stream, show=False):
+def read_sprite(bytes_stream, *, show=False, declared_size=None):
 
-    buffer, width, height = decompress_sprite(bytes_stream)
+    buffer, width, height = decompress_sprite(bytes_stream, declared_size)
 
     buffer_a = memoryview(buffer)
     buffer_b = buffer_a[392:]
     buffer_c = buffer_a[784:]
+
+    if declared_size is not None:
+        width, height = declared_size
 
     adjust_position(width, height, buffer_b, buffer_a)
     adjust_position(width, height, buffer_c, buffer_b)
@@ -20,14 +23,15 @@ def read_sprite(bytes_stream, show=False):
 
 
 def adjust_position(width, height, src_buffer, dest_buffer):
-    h_pad = 7 - height
+    h_pad = (7 - height)
     w_pad = (8 - width) // 2
+    offset = 7 * w_pad + h_pad
     h_col = height * 8
 
     for i in range(392):
         dest_buffer[i] = 0
 
-    src, dst = 0, w_pad * 56 + h_pad * 8
+    src, dst = 0, (offset * 8) % 256
     for _ in range(width):
         dest_buffer[dst:dst + h_col] = src_buffer[src:src + h_col]
         src += h_col
