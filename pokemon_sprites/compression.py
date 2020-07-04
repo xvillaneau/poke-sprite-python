@@ -41,6 +41,7 @@ def decompress_sprite(bytes_stream, declared_size=None):
 
     logger.debug("Decompressing Bit Plane 1")
     decompress_to_buffer(bits, width, height, buffer_1)
+    logger.debug("Total bits read: %d", bits.counter)
 
     logger.debug("Decoding mode %d detected", mode)
     if mode == 1:
@@ -67,6 +68,7 @@ def decompress_to_buffer(bit_stream, width, height, buffer):
     size = width * h_col
     # Keeps track of where to write the next pair of bytes
     pos, shift = 0, 6
+    start_count = bit_stream.counter
 
     for pair in decompress_stream(bit_stream):
         buffer[pos] |= (pair << shift)
@@ -80,6 +82,11 @@ def decompress_to_buffer(bit_stream, width, height, buffer):
                 pos -= h_col
             else:
                 shift = 6
+
+    logger.debug(
+        "Done decompressing bit plane (%d bits -> %d bits)",
+        bit_stream.counter - start_count, pos * 8
+    )
 
 
 def decompress_stream(bit_stream):

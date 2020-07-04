@@ -15,11 +15,15 @@ class BitStreamReader:
         self._buffer = 0
         self._eof = False
         self._stream = bytes_stream
+        self.counter = 0
 
     def read(self, n=8):
         """
         Read the next n bits from the stream, 8 by default.
         """
+        if self._eof:
+            raise EOFError()
+
         out = 0
 
         while n > 0:
@@ -50,5 +54,6 @@ class BitStreamReader:
             # Update our pointer and counters
             self._pointer -= n_read
             n -= n_read
+            self.counter += n_read
 
         return out
