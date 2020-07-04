@@ -27,10 +27,10 @@ def decompress_sprite(bytes_stream, show=False):
     _decompress_rle(bits, width, height, buffer_1)
 
     if mode != 1:
-        delta_decode_buffer(buffer_1)
-    delta_decode_buffer(buffer_0)
+        delta_decode_buffer(width, height, buffer_1)
+    delta_decode_buffer(width, height, buffer_0)
     if mode != 0:
-        for i in range(392):
+        for i in range(width * height * 8):
             buffer_1[i] ^= buffer_0[i]
 
     if show:
@@ -76,20 +76,25 @@ def _decompress_rle(bit_stream, width, height, buffer):
         shift = 6 - 2 * (col % 4)
 
 
-def delta_decode_buffer(buffer):
+def delta_decode_buffer(width, height, buffer):
+    # Delta decoding is done by row, but data in the buffer is by
+    # columns of bytes from top to bottom. So we'll need to query
+    # a bit all around the place.
+
     row, col, state = 0, 0, 0
-    while row < 56:
-        byte = buffer[row * 7 + col]
+    while row < (height * 8):
+        pos = col * height * 8 + row
+        byte = buffer[pos]
 
         first = DELTA_DECODE_NIBBLE[byte >> 4] ^ (0b1111 * state)
         state = first & 1
         second = DELTA_DECODE_NIBBLE[byte & 0b1111] ^ (0b1111 * state)
         state = second & 1
 
-        buffer[row * 7 + col] = (first << 4) + second
+        buffer[pos] = (first << 4) + second
         col += 1
 
-        if col >= 7:
+        if col >= width:
             row += 1
             col, state = 0, 0
 
