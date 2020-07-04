@@ -1,16 +1,25 @@
 from .bitwise import BitStreamReader
 
 
-def decompress_sprite(bytes_stream):
+def decompress_sprite(bytes_stream, declared_size=None):
     bits = BitStreamReader(bytes_stream)
     read = bits.read
-
-    buffer_b = bytearray(392)
-    buffer_c = bytearray(392)
 
     width = bits.read(4)
     height = bits.read(4)
     # Bits to read per sprite plane
+    print(f"Detected a size of {width}x{height} from the binary data")
+
+    max_size_tiles = max(width * height, 49)
+    if declared_size is not None:
+        declared_w, declared_h = declared_size
+        max_size_tiles = max(max_size_tiles, declared_w * declared_h)
+
+    buffer = bytearray(392 * 2 + 8 * max_size_tiles)
+    print(f"Created memory buffer of {len(buffer)} bytes")
+    view = memoryview(buffer)
+    buffer_b = view[392:]
+    buffer_c = view[392 * 2:]
 
     invert_buffers = bool(read(1))
     if invert_buffers:
@@ -40,7 +49,7 @@ def decompress_sprite(bytes_stream):
         delta_decode_buffer(width, height, buffer_0)
         xor_buffers(width, height, buffer_1, buffer_0)
 
-    return buffer_b, buffer_c, width, height
+    return buffer, width, height
 
 
 def decompress_to_buffer(bit_stream, width, height, buffer):

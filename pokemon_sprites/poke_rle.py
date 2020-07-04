@@ -5,8 +5,11 @@ from .compression import decompress_sprite
 
 def read_sprite(bytes_stream, show=False):
 
-    buffer_b, buffer_c, width, height = decompress_sprite(bytes_stream)
-    buffer_a = bytearray(392)
+    buffer, width, height = decompress_sprite(bytes_stream)
+
+    buffer_a = memoryview(buffer)
+    buffer_b = buffer_a[392:]
+    buffer_c = buffer_a[784:]
 
     adjust_position(width, height, buffer_b, buffer_a)
     adjust_position(width, height, buffer_c, buffer_b)
