@@ -5,7 +5,7 @@ from .bitwise import BitStreamReader
 logger = logging.getLogger("poke_sprite")
 
 
-def decompress_sprite(bytes_stream, declared_size=None):
+def decompress_sprite(bytes_stream):
     bits = BitStreamReader(bytes_stream)
     read = bits.read
 
@@ -13,7 +13,10 @@ def decompress_sprite(bytes_stream, declared_size=None):
     # tiles. This size may not match that declared in the Pokédex.
     width = read(4)
     height = read(4)
-    logger.debug("Detected a size of %d×%d tiles from the binary data", width, height)
+    logger.debug(
+        "Detected a size of %d×%d tiles from the binary data",
+        width, height
+    )
 
     # The Game Boy RAM is such that the routine can write anywhere it
     # wants to, sometimes with hilarious results. We don't really want
@@ -24,13 +27,8 @@ def decompress_sprite(bytes_stream, declared_size=None):
     # our minimum size. If we are dealing with a glitched sprite of
     # much larger size, we also allocate enough memory so that the C
     # region can hold all of it.
-
-    max_size_tiles = max(width * height, 49)
-    if declared_size is not None:
-        declared_w, declared_h = declared_size
-        max_size_tiles = max(max_size_tiles, declared_w * declared_h)
-
-    buffer = bytearray(392 * 2 + 8 * max_size_tiles)
+    buffer_size_tiles = 49 * 2 + max(49, width * height)
+    buffer = bytearray(buffer_size_tiles * 8)
     logger.debug("Created memory buffer of %d bytes", len(buffer))
 
     # Buffers B and C are abstracted as views from a given offset.
@@ -46,7 +44,10 @@ def decompress_sprite(bytes_stream, declared_size=None):
         buffer_0, buffer_1 = buffer_c, buffer_b
     else:
         buffer_0, buffer_1 = buffer_b, buffer_c
-    logger.debug("Bit plane order detected: BP0 in %s", 'C' if invert_buffers else 'B')
+    logger.debug(
+        "Bit plane order detected: BP0 in %s",
+        'C' if invert_buffers else 'B'
+    )
 
     # Decompress the first bit plane
     logger.debug("Decompressing Bit Plane 0")

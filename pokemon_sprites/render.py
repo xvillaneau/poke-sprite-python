@@ -15,13 +15,7 @@ def render_sprite(bytes_stream, *, show=False, pokedex_size=None):
     """
     # Run the sprite decompression. This populates the buffer so that
     # regions B and C hold the low and high bit planes respectively.
-    buffer, width, height = decompress_sprite(bytes_stream, pokedex_size)
-
-    # The buffer regions can each hold a full sprite bit plane of 7×7
-    # tiles (49×49 pixels, or 392 bytes). We call them A, B, and C.
-    buffer_a = memoryview(buffer)
-    buffer_b = buffer_a[392:]
-    buffer_c = buffer_a[784:]
+    buffer, width, height = decompress_sprite(bytes_stream)
 
     # In practice, the size of a sprite is stored in the Pokédex and is
     # supplied to the padding algorithm. For convenience, we'll allow
@@ -29,6 +23,19 @@ def render_sprite(bytes_stream, *, show=False, pokedex_size=None):
     # in the Pokédex) to be used by default.
     if pokedex_size is not None:
         width, height = pokedex_size
+
+    # Now that the size may have changed, check that our buffer is
+    # still large enough and allocate more space if it isn't.
+    buffer_size_tiles = 49 * 2 + max(49, width * height)
+    to_allocate = len(buffer) - buffer_size_tiles * 8
+    if to_allocate > 0:
+        buffer.extend(bytearray(to_allocate))
+
+    # The buffer regions can each hold a full sprite bit plane of 7×7
+    # tiles (49×49 pixels, or 392 bytes). We call them A, B, and C.
+    buffer_a = memoryview(buffer)
+    buffer_b = buffer_a[392:]
+    buffer_c = buffer_a[784:]
 
     # Position adjustment copies the tiles between buffers so that they
     # are in the correct position in the 7×7 display.
