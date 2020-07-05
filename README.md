@@ -3,7 +3,7 @@
 This is a project for fun based on the [Pokémon Sprite Decompression Explained]
 video by the _Retro Games Mechanics Explained_ YouTube channel. The goal is to
 reproduce the image compression and decompression algorithm used in the
-Pokémon Blue (which I played), Red and Yellow games for the Nintendo Gameboy.
+Pokémon Blue (which I played), Red and Yellow games for the Nintendo Game Boy.
 
 **Progress:** Should work for all valid sprites and some of the glitched
 Pokémon (MissingNo confirmed to work).
