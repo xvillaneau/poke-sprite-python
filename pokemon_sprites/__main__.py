@@ -2,7 +2,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from .poke_rle import read_sprite
+from .render import render_sprite
 
 logger = logging.getLogger("poke_sprite")
 
@@ -29,7 +29,7 @@ def main(args):
 
     with open(path, "rb") as sprite:
         sprite.seek(seek)
-        read_sprite(sprite, show=True, declared_size=size)
+        render_sprite(sprite, show=True, pokedex_size=size)
 
 
 if __name__ == '__main__':
