@@ -25,7 +25,8 @@ def render_sprite(bytes_stream, *, show=False, pokedex_size=None):
         width, height = pokedex_size
 
     # Now that the size may have changed, check that our buffer is
-    # still large enough and allocate more space if it isn't.
+    # still large enough and allocate more space if it isn't. This
+    # only applies for glitch Pokémon sprites.
     buffer_size_tiles = 49 * 2 + max(49, width * height)
     to_allocate = len(buffer) - buffer_size_tiles * 8
     if to_allocate > 0:
@@ -46,10 +47,15 @@ def render_sprite(bytes_stream, *, show=False, pokedex_size=None):
     adjust_position(width, height, buffer_b, buffer_a)  # B -> A
     adjust_position(width, height, buffer_c, buffer_b)  # C -> B
 
+    # Combine the data in A and B to form the 2-bit sprite bitmap
+    zip_bit_planes(buffer)
+
     logger.info("Processing complete")
     if show:
-        im = Image.frombuffer("L", (56, 56), render(buffer_a, buffer_b))
+        im = Image.frombuffer("L", (56, 56), render_8bit(buffer[392:1176]))
         ImageOps.invert(im).show()
+
+    return bytes(buffer[392:1176])
 
 
 def adjust_position(width, height, src_buffer, dest_buffer):
@@ -81,14 +87,65 @@ def adjust_position(width, height, src_buffer, dest_buffer):
         dst += 56
 
 
-def render(buffer_0, buffer_1):
-    screen = bytearray(49 * 64)
-    for pointer in range(49 * 8):
-        col, row = divmod(pointer, 56)
-        pos = row * 56 + col * 8
+def zip_bit_planes(buffer):
+    """
+    Combine the bit planes in regions A & B into the full 2-bit sprite.
+    This data is built so that each pair of bytes corresponds to the
+    low and high bits (respectively) of a row of 8 pixels
+    """
+    # Start 3 pointers at the end of A, B, and C
+    pt_a, pt_b, pt_zip = 391, 783, 1175
 
-        a, b = buffer_0[pointer], buffer_1[pointer]
-        for i in range(8):
-            f = 1 << (7 - i)
-            screen[pos + i] = (a & f > 0) * 85 + (b & f > 0) * 170
+    # Go through the buffer backwards, alternating low and high bits
+    while pt_zip >= 392:
+        buffer[pt_zip] = buffer[pt_b]
+        buffer[pt_zip - 1] = buffer[pt_a]
+        pt_zip -= 2
+        pt_a -= 1
+        pt_b -= 1
+
+
+ZIPPED_NIBBLES = [
+    0x00000000, 0x00000001, 0x00000100, 0x00000101,
+    0x00010000, 0x00010001, 0x00010100, 0x00010101,
+    0x01000000, 0x01000001, 0x01000100, 0x01000101,
+    0x01010000, 0x01010001, 0x01010100, 0x01010101,
+]
+
+
+def render_8bit(sprite_2bit):
+    """
+    Convert the column-order 2-bit deep Game Boy sprite into a 8-bit
+    bitmap in row order, for display on a modern device.
+
+    The 2-bit image data is organized in an unusual way:
+    - Each pair of bytes encodes one row of 8 pixels in a tile. The
+      first byte holds the low bits, and the second the high bits.
+    - Tiles are ordered in column order, then left to right.
+
+    So converting to a bitmap requires three transformations:
+    1. Transpose the offset from column-order to row order
+    2. Zip the two bytes so that their bits alternate
+    3. Convert 2-bit depth (0-3) into 8-bit (0-255)
+    """
+    screen = bytearray(49 * 64)
+
+    # Iterate over the pairs of bytes in the 2-bit image
+    for pt in range(0, 784, 2):
+
+        # Compute the location of the 8-pixel row in the new image
+        col, row = divmod(pt, 112)
+        pos = row * 28 + col * 8
+
+        # Zip the bytes: nibbles of 4 bits is converted into 4 bytes,
+        # then the upper and lower nibbles of each bytes are combined.
+        a, b = sprite_2bit[pt:pt + 2]
+        upper = ZIPPED_NIBBLES[a >> 4] + (ZIPPED_NIBBLES[b >> 4] << 1)
+        lower = ZIPPED_NIBBLES[a & 15] + (ZIPPED_NIBBLES[b & 15] << 1)
+        zipped = (upper << 32) + lower
+
+        # Scale the value of those 8 bytes to 0-255, and write them
+        zipped *= 85
+        screen[pos:pos+8] = zipped.to_bytes(8, "big")
+
     return screen
